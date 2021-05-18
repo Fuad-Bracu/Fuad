@@ -2,7 +2,9 @@ from django.shortcuts import render,redirect
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate,logout,login
 from .models import *
-from datetime import date
+from datetime import date,datetime
+from django.http import HttpResponse
+from django.views.decorators.csrf import csrf_exempt
 
 # Create your views here.
 
@@ -50,11 +52,13 @@ def About(request):
 def Contact(request):
     return render(request, 'contact.html')	
 	
-	
+@csrf_exempt	
 def Signup(request):
     error = False
     if request.method == 'POST':
+
         f = request.POST['fname']
+        
         l = request.POST['lname']
         u = request.POST['uname']
         p = request.POST['pwd']
@@ -62,11 +66,13 @@ def Signup(request):
         c = request.POST['city']
         ad = request.POST['add']
         e = request.POST['email']
+        
         i = request.FILES['img']
         con = request.POST['contact']
         user = User.objects.create_user(username=u, email=e, password=p, first_name=f,last_name=l)
         Profile.objects.create(user=user, dob=d, city=c, address=ad, contact=con,image=i)
         error = True
+        return HttpResponse('this worked')
     d = {'error':error}
     return render(request, 'signup.html',d)
 
@@ -84,6 +90,8 @@ def Login(request):
                 error = "not"
         except:
             error="not"
+
+        return HttpResponse('login working')
     d = {'error': error}
     return render(request,'login.html',d)
 
@@ -101,6 +109,7 @@ def Admin_Login(request):
                 error = "not"
         except:
             error="not"
+        return HttpResponse('done')
     d = {'error': error}
     return render(request,'loginadmin.html',d)
 
@@ -117,7 +126,7 @@ def View_user(request):
     d = {'user':pro}
     return render(request,'view_user.html',d)
 
-
+@csrf_exempt
 def Add_Product(request):
     if not request.user.is_authenticated:
         return redirect('login_admin')
@@ -129,9 +138,14 @@ def Add_Product(request):
         pr = request.POST['price']
         i = request.FILES['img']
         d = request.POST['desc']
+
         ct = Category.objects.get(name=c)
-        Product.objects.create(category=ct, name=p, price=pr, image=i, desc=d)
+
+        Product.objects.create(category=ct, name=p, price=int(pr), image=i, desc=d)
+
         error=True
+        return HttpResponse('product added')
+        
     d = {'cat': cat,'error':error}
     return render(request, 'add_product.html', d)
 
@@ -265,6 +279,7 @@ def Feedback(request, pid):
         pro = Profile.objects.filter(user=user, contact=con).first()
         Send_Feedback.objects.create(profile=pro, date=d, message1=m)
         error = True
+        return HttpResponse('feedback sent')
     d = {'pro': pro, 'date1': date1,'num1':num1,'error':error}
     return render(request, 'feedback.html', d)
 
@@ -289,6 +304,8 @@ def Change_Password(request):
             error = "yes"
         else:
             error = "not"
+
+        return HttpResponse('changed')
     d = {'error':error,'num1':num1}
     return render(request,'change_password.html',d)
 
@@ -335,15 +352,21 @@ def Booking_order(request, pid):
     cart = Cart.objects.filter(profile=data).all()
     total = 0
     num1=0
-    for i in cart:
-        total+=i.product.price
-    user1 = data1.username
-    li = pid.split('.')
-    li2 = []
-    for j in li:
-        if user1 != j:
-            li2.append(int(j))
-            num1+=1
+    try:
+        for i in cart:
+            total=i.product.price+total
+        user1 = data1.username
+        li = pid.split('.')
+        li2 = []
+        for j in li:
+            if user1 != j:
+                li2.append(int(j))
+                num1+=1
+
+    
+
+    except:
+        pass
     date1 = date.today()
     if request.method == "POST":
         d = request.POST['date1']
@@ -486,6 +509,7 @@ def delete_product(request,pid):
 def profile(request):
     if not request.user.is_authenticated:
         return redirect('login')
+    d={}
     user = User.objects.get(id=request.user.id)
     pro = Profile.objects.get(user=user)
     cart=""
@@ -495,12 +519,16 @@ def profile(request):
         pass
     num1 = 0
     total = 0
-    for i in cart:
-        total += i.product.price
-        num1 += 1
-    user = User.objects.get(id=request.user.id)
-    pro = Profile.objects.get(user=user)
-    d={'pro':pro,'user':user,'num1':num1,'total':total}
+    try:
+
+        for i in cart:
+            total += i.product.price
+            num1 += 1
+        user = User.objects.get(id=request.user.id)
+        pro = Profile.objects.get(user=user)
+        d={'pro':pro,'user':user,'num1':num1,'total':total}
+    except:
+        pass
     return render(request,'profile.html',d)
 
 
@@ -517,9 +545,12 @@ def Edit_profile(request):
         pass
     num1=0
     total=0
-    for i in cart:
-        total+=i.product.price
-        num1+=1
+    try:
+        for i in cart:
+            total+=i.product.price
+            num1+=1
+    except:
+        pass
     if request.method == 'POST':
         f = request.POST['fname']
         l = request.POST['lname']
@@ -557,6 +588,7 @@ def Edit_profile(request):
         pro.address=ad
         pro.save()
         error = True
+        return HttpResponse('done')
     d = {'error':error,'pro':pro,'num1':num1,'total':total}
     return render(request, 'edit_profile.html',d)
 
